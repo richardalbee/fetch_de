@@ -68,10 +68,8 @@ The sections below detail how to configure your environment for running the etl_
 6. Test local Access
 
     * Read a message from the queue using awslocal:
-    <br>
     ```awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/login-queue```
     * Connect to the Postgres database, verify the table is created
-    <br>
     ```
     psql -d postgres -U postgres -p 5432 -h localhost -W;
     postgres=# select * from user_logins;
@@ -122,11 +120,9 @@ Run the following python script located in this repo to begin transforming data 
     * There are several significant ways to increase the performance of this application: (1) batching data ingestion, (2) batching the insertion of rows into the Postgresql table, and (3) spinning up multiple Python instances of the application. 
     <br><br>
     (1) Batching data ingestion by upping the "MaxNumberOfMessages" from 1 to its maximum of 10. We could also separate and containerize the process of recieving messages from the sqs queue from the transformation and upload process if mass-scale bandwidth is required.
-    <br>
     ```
     sqs_response = client.receive_message(QueueUrl=endpoint_url, MaxNumberOfMessages = 1)
     ```
-    <br><br>
     (2) Batching the insertion of rows into the Postgresql table over inserting each row serially will significantly address IO bottlenecks. If mass-scale is needed, staging the data as CSV spliced into 1gb segments which are then copied into the table will be performant.
     <br><br>
     (3) Python has built in multiprocessing / multithreading modules we can utilize for spinning up additional workers. We can also run multiple instances of the script as long we ensure the same message does not get pulled off of the SQS queue twice. Due to the risk, we would want to do proper design planning for this step.
@@ -145,6 +141,7 @@ Run the following python script located in this repo to begin transforming data 
     * "app_version" should be transformed to an integer the instructions list the field as "integer".
     * We need to remove messages from the sqs stack after receiving them.
     * Due to time constraints, serial-level performance is sufficient for now.
+    * We should stop the application when there are no more messages. For production, this may be different.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
