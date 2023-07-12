@@ -1,5 +1,5 @@
 import boto3
-import ast
+import json
 import psycopg2
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -36,9 +36,9 @@ class UserLogins(object):
         return ciphertext.hex()
 
     # Function to decrypt data using AES
-    def decrypt(self, ciphertext:str) -> str:
+    def decrypt(self, ciphertext:str, key = encryption_key, init_vector = encryption_iv) -> str:
         '''AES deencryption using a encryption_key and initialization vector'''
-        cipher = AES.new(encryption_key, AES.MODE_CBC, encryption_iv)
+        cipher = AES.new(key, AES.MODE_CBC, init_vector)
         decrypted_data = unpad(cipher.decrypt(bytes.fromhex(ciphertext)), AES.block_size)
         return decrypted_data.decode('utf-8')
    
@@ -48,7 +48,7 @@ class UserLogins(object):
         self.data['masked_device_id'] = self.encrypt(self.data['device_id'])
 
 
-def get_localstack_sqs(endpoint_url = 'http://localhost:4566/000000000000/login-queue'):
+def get_localstack_sqs(endpoint_url: str = 'http://localhost:4566/000000000000/login-queue') -> dict:
     '''Utilize Boto3 to retrieve and then delete message from stack
     Retrieve message from sqs stack:
     https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/receive_message.html
@@ -56,19 +56,24 @@ def get_localstack_sqs(endpoint_url = 'http://localhost:4566/000000000000/login-
     delete from the sqs queue:
     https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_DeleteMessage.html
     '''
+
     #https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/receive_message.html
     sqs_response = client.receive_message(QueueUrl=endpoint_url, MaxNumberOfMessages = 1)
-    client.delete_message(QueueUrl = endpoint_url, ReceiptHandle = sqs_response["Messages"][0]['ReceiptHandle'])
+
+    if sqs_response.get('Messages') is None:
+        print('No message returned')
+        return {}
+    else:
+        print(sqs_response)
+        delete_response = client.delete_message(QueueUrl = endpoint_url, ReceiptHandle = sqs_response['Messages'][0]['ReceiptHandle'])
+        print(f" SQS Message delete HTTP Response: {delete_response['ResponseMetadata']['HTTPStatusCode']}")
     return sqs_response
 
 
-def parse_data(sqs_message:dict) -> UserLogins:
+def parse_data(sqs_message: dict) -> UserLogins:
     '''Parse sqs response into UserLogin class and create encrypted pii'''
-    
-    #sqs_message["Messages"][0]['Body'] value is dict as string. Ast converts str value to dict
-    print(sqs_message["Messages"][0]['Body'])
-    print(type(sqs_message["Messages"][0]['Body']))
-    data = ast.literal_eval(sqs_message["Messages"][0]['Body'])
+
+    data = json.loads(sqs_message['Messages'][0]['Body'])
     data['create_date'] = sqs_message['ResponseMetadata']['HTTPHeaders']['date']
     encrypted_data = UserLogins(
         sqs_message = sqs_message,
@@ -123,9 +128,10 @@ def main():
     '''Serially process SQS stack into user_logins table'''
     while True:
         result = get_localstack_sqs()
-        print(result["Messages"][0]['Body'])
+        if not result.get('messages'):
+            break
+        print(f"SQS Message: {result['Messages'][0]['Body']}")
         parsed_result = parse_data(result)
-        #print(parsed_result.data)
         insert_user_logins(login_data = parsed_result.data)
 
 

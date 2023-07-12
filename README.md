@@ -68,8 +68,10 @@ The sections below detail how to configure your environment for running the etl_
 6. Test local Access
 
     * Read a message from the queue using awslocal:
+    <br>
     ```awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/login-queue```
     * Connect to the Postgres database, verify the table is created
+    <br>
     ```psql -d postgres -U postgres -p 5432 -h localhost -W```
     <br>
     ```postgres=# select * from user_logins;```
@@ -119,6 +121,7 @@ Run the following python script located in this repo to begin transforming data 
     * There are several significant ways to increase the performance of this application: (1) batching data ingestion, (2) batching the insertion of rows into the Postgresql table, and (3) spinning up multiple Python instances of the application. 
     <br><br>
     (1) Batching data ingestion by upping the "MaxNumberOfMessages" from 1 to its maximum of 10. We could also separate and containerize the process of recieving messages from the sqs queue from the transformation and upload process if mass-scale bandwidth is required.
+    <br>
     ```sqs_response = client.receive_message(QueueUrl=endpoint_url, MaxNumberOfMessages = 1)```
     <br><br>
     (2) Batching the insertion of rows into the Postgresql table over inserting each row serially will significantly address IO bottlenecks. If mass-scale is needed, staging the data as CSV spliced into 1gb segments which are then copied into the table will be performant.
@@ -128,9 +131,9 @@ Run the following python script located in this repo to begin transforming data 
 4. How can PII be recovered later on?
     * By utilizing the AES Encryption Key and the initialization vector, we can reverse the encryption with the decrypt function (not yet implemented).
     ```
-    def decrypt(self, ciphertext:str) -> str:
+    def decrypt(self, ciphertext:str, key = encryption_key, init_vector = encryption_iv) -> str:
         '''AES deencryption using a encryption_key and initialization vector'''
-        cipher = AES.new(encryption_key, AES.MODE_CBC, encryption_iv)
+        cipher = AES.new(key, AES.MODE_CBC, init_vector)
         decrypted_data = unpad(cipher.decrypt(bytes.fromhex(ciphertext)), AES.block_size)
         return decrypted_data.decode('utf-8')
     ```
