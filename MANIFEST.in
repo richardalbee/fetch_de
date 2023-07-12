@@ -1,2 +1,0 @@
-include *.txt *.png
-recursive-include docs *.txt *.png

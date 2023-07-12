@@ -1,177 +1,144 @@
 <a name="readme-top"></a>
 
-<!-- VideoPoker-5CardRedraw -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
-
-
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/ralbee1/VideoPoker-5CardRedraw">
-    <img src="documentation/logo.png" alt="Logo" width="320" height="320">
-  </a>
-
-<h3 align="center">VideoPoker-5CardRedraw</h3>
-
-  <p align="center">
-    A pythonic creation of a 5 card redraw video poker.
-    <br />
-    <a href="https://github.com/ralbee1/VideoPoker-5CardRedraw"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/ralbee1/VideoPoker-5CardRedraw">View Demo</a>
-    ·
-    <a href="https://github.com/ralbee1/VideoPoker-5CardRedraw/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/ralbee1/VideoPoker-5CardRedraw/issues">Request Feature</a>
-  </p>
-</div>
-
-
+<h3 align="center">Fetch Data Engineer Assessment</h3>
 
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <a href="#about-the-project">About The Project</a>
+      <a href="#Design Outline">Design Outline</a>
       <ul>
-        <li><a href="#built-with">Built With</a></li>
-        <li><a href="#Features">Features</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
+        <li><a href="#Install Process">Install Process</a></li>
+        <li><a href="#Running the Code">Running the Code</a></li>
+        <li><a href="#Future Improvements">Future Improvements</a></li>
+        <li><a href="#Assignment Questions">Assignment Questions</a></li>
   </ol>
 </details>
 
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
-<!-- 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
--->
-Five-card Draw is a playable Python poker application. This project served as a hands-on Python learning experience in 2021. On my journey, I learned about creating graphical user interfaces in Python, pythonic best practices, CI/CD workflows, PyPi deployments, and much more. The beautiful learning opportunity this project provided was balancing desired learning opportunities and refining 5 Card Draw into a polished application. This project archived with the last remaining features involved in further polishing the UI/UX experience, adding sound, and cashing out player credits. If I were to start over, I'd rank poker hands with a semantic system over an integer score.
- 
+<!-- Design Outline -->
+## Design Outline
+
+My ETL workflow design utilizes Python's Boto3 AWS module redirected to the LocalStack SQS queue. Boto3 Receive_Message[s] from the SQS stack serially and then deletes the message. The SQS message is parsed into a UserLogins class, extracting the desired ETL data into a dictionary. The "RecieptHandle" from the SQS message is passed to a delete_message call to remove messages already received from the queue preventing the reception of the same message twice. I chose to mask PII data using AES encryption (Cryptodome python module) over K-Anonymization due to the prototype processing data serially, allotted time constraints, and long-term reversibility of the data. We upload the rows serially, admittedly slowly, using psycopg2 in Python.
+
+The sections below detail how to configure your environment for running the etl_user_logins.py file. Altogether, this file reads data from the SQS queue, transforms the data, and then inserts the rows into a user_logins table.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Install Process
+
+1. Install Docker and Docker Containers 
+    - Install Guide: https://docs.docker.com/get-docker/
+    - Postgres https://hub.docker.com/r/fetchdocker/data-takehome-postgres
+    - Localstack https://hub.docker.com/r/fetchdocker/data-takehome-localstack
+2. Install Python 3.10.8 https://www.python.org/downloads/release/python-3108/
+    * Note, other python versions may conflict
+3. Install Python Requirements from CMD
+    - pip install psycopg2
+    - pip install cryptodome
+    - pip install boto3 (aws)
+    - pip install awscli-local (Testing)
+4. Install PostGreSQL https://www.postgresql.org/download/
+    * Ensure the postgres docker container has a database reachable with the following config:
+    ```sh
+   hostname: localhost
+   database name: postgres
+   username: postgres
+   password: postgres
+   port: 5432
+   ```
+    * Then, Create a "user_logins" table directly or in psql:
+    
+    ```sh
+   CREATE TABLE IF NOT EXISTS user_logins(
+    user_id varchar(128),
+    device_type varchar(32),
+    masked_ip varchar(256),
+    masked_device_id varchar(256),
+    locale varchar(32),
+    app_version integer,
+    create_date date
+    );
+   ```
+5. Start Docker Containers
+    * Copy this github repo locally
+    * Run this command from the repo root:
+    ```docker-compose up```
+6. Test local Access
+
+    * Read a message from the queue using awslocal:
+    ```awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/login-queue```
+    * Connect to the Postgres database, verify the table is created
+    ```psql -d postgres -U postgres -p 5432 -h localhost -W```
+    <br>
+    ```postgres=# select * from user_logins;```
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-### Features
+<!-- Running the Code -->
+## Running the Code
 
-- [ ] **5 Card Redraw**
-  - [ ] Modular Hand Ranking and Scoring
-  - [ ] Player Hand and Deck creation
-  - [ ] Playable GUI interface
-  - [ ] Bank text file
-- [ ] **PyPi Installs**
-- [ ] **Pep 8 Standards**
-- [ ] **GitHub CI/CD Pipelines**
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-The following is an guide for running 5 card redraw poker locally.
-
-### Prerequisites
-
-1. [Python 3.10.8 or Newer](https://www.python.org/downloads/release/python-3108/)
-
-
-### Installation
-
-Local Repo Install:
-<br/>
-Summary: The developer install is for those who want to contribute to or clone VideoPoker-5CardRedraw.
-1. Clone the repo (or use Github Desktop)
-   ```sh
-   git clone https://github.com/ralbee1/5_card_draw.git
-   ```
-2. Open the CLI and navigate the current working directory to where you cloned VideoPoker-5CardDraw
-3. Install the Pip Package from the CLI, copy and run this command:
-   ```sh
-   py -m pip install -e .
-   ```
-<br/>
-<br/>
-User Install
-<br/>
-1. Automatic User Install from the Command line via PyPi.
-   ```sh
-   pip install five-card-draw
-   ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- USAGE EXAMPLES -->
-## Usage / How to Play
-If your python files open with Python by default then from the commmand line run:
-
+Run the following python script located in this repo to begin transforming data from the SQS queue and upload it into the postgres table.
   ```js
-  poker_start.py;
+  etl_user_logins.py;
   ```
 
-Troubleshooting:
-* "'poker_start.py' is not recognized as an internal or external command, operable program or batch file."
-  * Your terminal needs to be able to find the file. For windows, you need to ensure your python "script" folder is in your path variable
-  For example: C:\Users\{username}\AppData\Roaming\Python\{pythonversion}\Scripts
-  You may also navigate to where the pip was installed and run poker_start.py with python manually.
+<!-- Future Improvements -->
+## Future Improvements
 
-How to Play:
-* The game is played by aiming to make the best poker hand possible. The top of the interface shows the hand ranking and the payouts sorted by how many credits you bet per round, 1 thru 5. To begin, click DEAL. You hold cards with the intent of keeping them and drawing new cards to try to improve your hand ranking. After drawing new cards, your hand is automatically scored and profits paid out. You may then click "DEAL" and start over.
+1. Securing Database Auth and AES Encyryption Key/Initialization Vector.
+    -   Storing these keys and credentials in AWS Secrets Manager or similiar password keeper and utilizing account auth to securely pull the required information as needed is preferable over plain text.
+    
+2. Performance Optimization (Batching)
+    -   (Detailed in assignment question #3)
+
+3. Refine Error Handling
+    -   The data is likely not perfect. We need the application to be able to handle exceptions gracefully (ignore or fail) on these exceptions as aligned with the business expectations for this process. The current version lacks significant testing and we would want to refine data exceptions before pushing to prod.
+    -   Stop when the queue is finished. There is no need for the program to run indefinately if there nothing on the queue. An alert saying the application stopped could be considered.
+4. Implement Logging
+    - Troubleshooting applications with runtime information only visibile via direct console is a limitation. Adding sigificantly more logging and outputting the logging to a log file or logging application is ideal. Python has dedicated logging objects we can use.
+    
+    https://docs.python.org/3/library/logging.html
+
+5. Tie to Python PyPi application
+    - Creating a Python module supporting core features allows for reiterable implementation of logging, auth, environment handling, api integrations, and much more! The development of ETL workflows is significantly faster when developing scripts from a central repo, similiar to what I have developed at Moxe Health.
+
+<!-- Assignment Questions -->
+## Assignment Questions
+
+1. How would you deploy this application in production?
+    * Historically, I've designed PyPi package to create a python scripting environment package that can be loaded into Jenkins or GitHub Actions. AWS Codebuild is also an option. From there, we can run the script with all needed dependencies remotely. The queues need to be pointed to production, copies of this script can be kept running in non-prod environments, separately.
+    
+2.  What other components would you want to add to make this production ready?
+    * Minimally, we need to secure the database credentials and encryption keys. The "Future Improvements" section above details other improvements I would make with varying priorities. 
+    
+3.  How can this application scale with a growing dataset.
+    * There are several significant ways to increase the performance of this application: (1) batching data ingestion, (2) batching the insertion of rows into the Postgresql table, and (3) spinning up multiple Python instances of the application. 
+    <br><br>
+    (1) Batching data ingestion by upping the "MaxNumberOfMessages" from 1 to its maximum of 10. We could also separate and containerize the process of recieving messages from the sqs queue from the transformation and upload process if mass-scale bandwidth is required.
+    ```sqs_response = client.receive_message(QueueUrl=endpoint_url, MaxNumberOfMessages = 1)```
+    <br><br>
+    (2) Batching the insertion of rows into the Postgresql table over inserting each row serially will significantly address IO bottlenecks. If mass-scale is needed, staging the data as CSV spliced into 1gb segments which are then copied into the table will be performant.
+    <br><br>
+    (3) Python has built in multiprocessing / multithreading modules we can utilize for spinning up additional workers. We can also run multiple instances of the script as long we ensure the same message does not get pulled off of the SQS queue twice. Due to the risk, we would want to do proper design planning for this step.
+
+4. How can PII be recovered later on?
+    * By utilizing the AES Encryption Key and the initialization vector, we can reverse the encryption with the decrypt function (not yet implemented).
+    ```
+    def decrypt(self, ciphertext:str) -> str:
+        '''AES deencryption using a encryption_key and initialization vector'''
+        cipher = AES.new(encryption_key, AES.MODE_CBC, encryption_iv)
+        decrypted_data = unpad(cipher.decrypt(bytes.fromhex(ciphertext)), AES.block_size)
+        return decrypted_data.decode('utf-8')
+    ```
+5. What are the assumptions you made?
+    * The "nonstandard" data in the sqs queue needs to be ignored.
+    * "app_version" should be transformed to an integer the instructions list the field as "integer".
+    * We need to remove messages from the sqs stack after receiving them.
+    * Due to time constraints, serial-level performance is sufficient for now.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-<!-- CONTACT -->
-## Contact
-
-* []()Email - ralbee1@iwu.edu
-* []()Project Link: [https://github.com/ralbee1/VideoPoker-5CardRedraw](https://github.com/ralbee1/VideoPoker-5CardRedraw)
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []() This variant of poker was inspired by Super Double Double as found in Las Vegas Casinos.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/ralbee1/VideoPoker-5CardRedraw.svg?style=for-the-badge
-[contributors-url]: https://github.com/ralbee1/VideoPoker-5CardRedraw/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/ralbee1/VideoPoker-5CardRedraw.svg?style=for-the-badge
-[forks-url]: https://github.com/ralbee1/VideoPoker-5CardRedraw/network/members
-[stars-shield]: https://img.shields.io/github/stars/ralbee1/VideoPoker-5CardRedraw.svg?style=for-the-badge
-[stars-url]: https://github.com/ralbee1/VideoPoker-5CardRedraw/stargazers
-[issues-shield]: https://img.shields.io/github/issues/ralbee1/VideoPoker-5CardRedraw.svg?style=for-the-badge
-[issues-url]: https://github.com/ralbee1/VideoPoker-5CardRedraw/issues
-[license-shield]: https://img.shields.io/github/license/ralbee1/VideoPoker-5CardRedraw.svg?style=for-the-badge
-[license-url]: https://github.com/ralbee1/VideoPoker-5CardRedraw/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/Richard-Albee
-[product-screenshot]: images/screenshot.png
-[python.org]: https://www.python.org/static/img/python-logo.png
-[python-url]: https://www.python.org/
-[pypi.org]: https://pypi.org/static/images/logo-small.2a411bc6.svg
-[pypi-url]: https://pypi.org/project/pip/
