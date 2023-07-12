@@ -1,5 +1,6 @@
-import boto3
+'''Module for retrieving sqs queues from local aws sqs queue and uploading into a local postgresdatabase after masking PII'''
 import json
+import boto3
 import psycopg2
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -12,7 +13,7 @@ encryption_key = b'Sixteen byte key'
 encryption_iv = b'InitializationVe'
 
 
-class UserLogins(object):
+class UserLogins():
     '''Encapsulation of data from SQS queue with data masking functions'''
     def __init__(self, sqs_message, user_id, device_type, ip, device_id, locale, app_version, create_date):
         self.sqs_message = sqs_message
@@ -41,7 +42,7 @@ class UserLogins(object):
         cipher = AES.new(key, AES.MODE_CBC, init_vector)
         decrypted_data = unpad(cipher.decrypt(bytes.fromhex(ciphertext)), AES.block_size)
         return decrypted_data.decode('utf-8')
-   
+
     def mask_pii(self):
         '''Reversibly encrypt ip and device_id'''
         self.data['masked_ip'] = self.encrypt(self.data['ip'])
@@ -63,10 +64,9 @@ def get_localstack_sqs(endpoint_url: str = 'http://localhost:4566/000000000000/l
     if sqs_response.get('Messages') is None:
         print('No message returned')
         return {}
-    else:
-        print(sqs_response)
-        delete_response = client.delete_message(QueueUrl = endpoint_url, ReceiptHandle = sqs_response['Messages'][0]['ReceiptHandle'])
-        print(f" SQS Message delete HTTP Response: {delete_response['ResponseMetadata']['HTTPStatusCode']}")
+
+    delete_response = client.delete_message(QueueUrl = endpoint_url, ReceiptHandle = sqs_response['Messages'][0]['ReceiptHandle'])
+    print(f" SQS Message delete HTTP Response: {delete_response['ResponseMetadata']['HTTPStatusCode']}")
     return sqs_response
 
 
@@ -102,7 +102,9 @@ def psycopg2_db_connection() -> tuple[psycopg2.extensions.connection, psycopg2.e
 
 
 def insert_user_logins(login_data: dict) -> int:
-    '''Insert data to the user_logins database'''
+    '''Insert data to the user_logins database. Returns how many rows were modified.
+    Catches and prints errors; ensures connections are closed.
+    '''
 
     conn,cur = psycopg2_db_connection()
     sql = """
@@ -125,7 +127,7 @@ def insert_user_logins(login_data: dict) -> int:
 
 
 def main():
-    '''Serially process SQS stack into user_logins table'''
+    '''Serially process SQS stack into user_logins table. Stop when no sqs messages returned.'''
     while True:
         result = get_localstack_sqs()
         if not result.get('messages'):

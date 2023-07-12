@@ -33,12 +33,12 @@ The sections below detail how to configure your environment for running the etl_
     - Postgres https://hub.docker.com/r/fetchdocker/data-takehome-postgres
     - Localstack https://hub.docker.com/r/fetchdocker/data-takehome-localstack
 2. Install Python 3.10.8 https://www.python.org/downloads/release/python-3108/
-    * Note, other python versions may conflict
+    * Note, other python versions likely work. Use at your own risk.
 3. Install Python Requirements from CMD
     - pip install psycopg2
     - pip install cryptodome
     - pip install boto3 (aws)
-    - pip install awscli-local (Testing)
+    - pip install awscli-local (Local testing only)
 4. Install PostGreSQL https://www.postgresql.org/download/
     * Ensure the postgres docker container has a database reachable with the following config:
     ```sh
