@@ -72,9 +72,10 @@ The sections below detail how to configure your environment for running the etl_
     ```awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/login-queue```
     * Connect to the Postgres database, verify the table is created
     <br>
-    ```psql -d postgres -U postgres -p 5432 -h localhost -W```
-    <br>
-    ```postgres=# select * from user_logins;```
+    ```
+    psql -d postgres -U postgres -p 5432 -h localhost -W;
+    postgres=# select * from user_logins;
+    ```
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -122,7 +123,9 @@ Run the following python script located in this repo to begin transforming data 
     <br><br>
     (1) Batching data ingestion by upping the "MaxNumberOfMessages" from 1 to its maximum of 10. We could also separate and containerize the process of recieving messages from the sqs queue from the transformation and upload process if mass-scale bandwidth is required.
     <br>
-    ```sqs_response = client.receive_message(QueueUrl=endpoint_url, MaxNumberOfMessages = 1)```
+    ```
+    sqs_response = client.receive_message(QueueUrl=endpoint_url, MaxNumberOfMessages = 1)
+    ```
     <br><br>
     (2) Batching the insertion of rows into the Postgresql table over inserting each row serially will significantly address IO bottlenecks. If mass-scale is needed, staging the data as CSV spliced into 1gb segments which are then copied into the table will be performant.
     <br><br>
